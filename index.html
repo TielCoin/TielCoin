@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Flappy Plane</title>
+<title>Flappy Cockatiel</title>
 <style>
   html,body { height:100%; margin:0; background:#70c5ce; font-family: Arial, sans-serif; }
   #gameWrap { display:flex; align-items:center; justify-content:center; height:100vh; }
@@ -33,7 +33,7 @@
 
     <div id="overlay">
       <div class="panel" id="panel">
-        <h2 style="margin:0 0 6px 0;">Flappy Plane</h2>
+        <h2 style="margin:0 0 6px 0;">Flappy Cockatiel</h2>
         <div style="font-size:14px; color:#123">Click / Tap / Press Space to start</div>
         <button id="startBtn">Start</button>
         <div style="margin-top:8px; font-size:12px; color:#555">Made with HTML5 Canvas</div>
@@ -52,8 +52,7 @@
   const panel = document.getElementById('panel');
   const startBtn = document.getElementById('startBtn');
 
-  // Game variables
-  let plane = { x:80, y: H/2, w:44, h:30, vy:0, angle:0 };
+  let plane = { x:80, y: H/2, w:50, h:50, vy:0, angle:0 };
   const gravity = 0.55;
   const jump = -9.5;
   let pipes = [];
@@ -61,49 +60,69 @@
   const pipeGap = 160;
   let speed = 2.6;
   let frameCount = 0;
-  let spawnInterval = 90; // frames
+  let spawnInterval = 90;
   let score = 0;
-  let best = Number(localStorage.getItem('flappyPlaneBest')) || 0;
-  let gameState = 'menu'; // menu | playing | over
+  let best = Number(localStorage.getItem('flappyCockatielBest')) || 0;
+  let gameState = 'menu';
 
-  // Helpers
   function rand(min,max){ return Math.random()*(max-min)+min; }
 
-  // Draw plane (simple stylized plane)
-  function drawPlane(p) {
+  // Draw a cartoon cockatiel directly in code
+  function drawCockatiel(p) {
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(p.angle);
-    // body
-    ctx.fillStyle = '#f77f00';
+
+    // Body
+    ctx.fillStyle = "#FFD84A";
     ctx.beginPath();
-    ctx.ellipse(0, 0, p.w/2, p.h/2.4, 0, 0, Math.PI*2);
+    ctx.ellipse(0, 0, p.w/2, p.h/2.2, 0, 0, Math.PI*2);
     ctx.fill();
-    // cockpit
-    ctx.fillStyle = '#fff';
+
+    // Wing
+    ctx.fillStyle = "#F6C63D";
     ctx.beginPath();
-    ctx.ellipse(8, -6, 10, 6, 0, 0, Math.PI*2);
+    ctx.ellipse(-4, 6, p.w/3.5, p.h/4, 0, 0, Math.PI*2);
     ctx.fill();
-    // tail
-    ctx.fillStyle = '#d35400';
+
+    // Cheek patch
+    ctx.fillStyle = "#FF7F50";
     ctx.beginPath();
-    ctx.moveTo(-p.w/2, -2);
-    ctx.lineTo(-p.w/2 - 12, -12);
-    ctx.lineTo(-p.w/2 + 2, -4);
+    ctx.ellipse(8, 2, p.w/7, p.h/7, 0, 0, Math.PI*2);
     ctx.fill();
-    // wing
-    ctx.fillStyle = '#efb810';
+
+    // Eye
+    ctx.fillStyle = "#000";
     ctx.beginPath();
-    ctx.moveTo(-6,4);
-    ctx.lineTo(18,6);
-    ctx.lineTo(6,14);
+    ctx.arc(10, -6, p.w/12, 0, Math.PI*2);
+    ctx.fill();
+
+    // Beak
+    ctx.fillStyle = "#E5B96F";
+    ctx.beginPath();
+    ctx.moveTo(p.w/4, 0);
+    ctx.lineTo(p.w/2.3, 4);
+    ctx.lineTo(p.w/4, 8);
     ctx.closePath();
     ctx.fill();
+
+    // Crest feathers
+    ctx.strokeStyle = "#FFD84A";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-2, -p.h/2.2);
+    ctx.lineTo(4, -p.h/1.5);
+    ctx.moveTo(2, -p.h/2.2);
+    ctx.lineTo(8, -p.h/1.6);
+    ctx.moveTo(6, -p.h/2.2);
+    ctx.lineTo(12, -p.h/1.7);
+    ctx.stroke();
+
     ctx.restore();
   }
 
   function resetGame() {
-    plane = { x:80, y: H/2, w:44, h:30, vy:0, angle:0 };
+    plane = { x:80, y: H/2, w:50, h:50, vy:0, angle:0 };
     pipes = [];
     frameCount = 0;
     score = 0;
@@ -113,7 +132,7 @@
     gameState = 'menu';
     overlay.style.display = 'flex';
     panel.innerHTML = `
-      <h2 style="margin:0 0 6px 0;">Flappy Plane</h2>
+      <h2 style="margin:0 0 6px 0;">Flappy Cockatiel</h2>
       <div style="font-size:14px; color:#123">Click / Tap / Press Space to start</div>
       <button id="startBtn">Start</button>
       <div style="margin-top:8px; font-size:12px; color:#555">Best: ${best}</div>
@@ -134,46 +153,34 @@
     const minOffset = 80;
     const maxOffset = H - pipeGap - 120;
     const topHeight = rand(minOffset, maxOffset);
-    pipes.push({
-      x: W + 10,
-      top: topHeight,
-      passed: false
-    });
+    pipes.push({ x: W + 10, top: topHeight, passed: false });
   }
 
   function update() {
     if (gameState !== 'playing') return;
 
     frameCount++;
-    // spawn pipes slower at start; gets slightly faster over time
     if (frameCount % Math.max(55, spawnInterval - Math.floor(score/5)) === 0) spawnPipe();
 
-    // physics
     plane.vy += gravity;
     plane.y += plane.vy;
     plane.angle = Math.max(-0.6, Math.min(1.2, plane.vy * 0.06));
 
-    // move pipes
     for (let i = pipes.length-1; i>=0; i--){
       pipes[i].x -= speed;
-      // scored
       if (!pipes[i].passed && pipes[i].x + pipeWidth < plane.x - plane.w/2) {
         pipes[i].passed = true;
         score++;
         scoreUI.textContent = 'Score: ' + score;
-        // gradually increase speed
         if (score % 5 === 0) speed += 0.25;
       }
-      // remove offscreen
       if (pipes[i].x + pipeWidth < -20) pipes.splice(i,1);
     }
 
-    // collide with ground or ceiling
     if (plane.y + plane.h/2 >= H - 6 || plane.y - plane.h/2 <= 6) {
       endGame();
     }
 
-    // collide with pipes
     for (let p of pipes) {
       const pipeTopRect = { x: p.x, y: 0, w: pipeWidth, h: p.top };
       const pipeBottomRect = { x: p.x, y: p.top + pipeGap, w: pipeWidth, h: H - (p.top + pipeGap) };
@@ -183,7 +190,6 @@
     }
   }
 
-  // basic circle-rect collision: plane approximated as circle
   function rectCircleCollide(rect, circle) {
     const cx = circle.x, cy = circle.y, r = Math.max(circle.w, circle.h)/2.3;
     const closestX = clamp(cx, rect.x, rect.x + rect.w);
@@ -197,8 +203,7 @@
   function endGame(){
     gameState = 'over';
     best = Math.max(best, score);
-    localStorage.setItem('flappyPlaneBest', best);
-    // show panel
+    localStorage.setItem('flappyCockatielBest', best);
     overlay.style.display = 'flex';
     panel.innerHTML = `
       <h2 style="margin:0 0 6px 0;">Game Over</h2>
@@ -212,36 +217,25 @@
   }
 
   function draw() {
-    // background sky gradient (canvas already has gradient in CSS, but draw clouds/ground)
     ctx.clearRect(0,0,W,H);
-
-    // draw clouds (simple)
     drawCloud(W*0.15 + (frameCount*0.2)%W, 80, 1.0, 1);
     drawCloud(W*0.6 - (frameCount*0.28)%W, 140, 0.8, 0.7);
 
-    // draw pipes
     for (let p of pipes) {
-      // top
       ctx.fillStyle = '#2e8b57';
       roundRect(ctx, p.x, 0, pipeWidth, p.top, 6, true, false);
-      // bottom
       roundRect(ctx, p.x, p.top + pipeGap, pipeWidth, H - (p.top + pipeGap) - 8, 6, true, false);
-
-      // pipe lip
       ctx.fillStyle = '#1f7a47';
-      ctx.fillRect(p.x - 4, p.top - 14, pipeWidth+8, 12); // top lip
-      ctx.fillRect(p.x - 4, p.top + pipeGap + (H - (p.top + pipeGap) - 8), pipeWidth+8, 12); // bottom lip
+      ctx.fillRect(p.x - 4, p.top - 14, pipeWidth+8, 12);
+      ctx.fillRect(p.x - 4, p.top + pipeGap + (H - (p.top + pipeGap) - 8), pipeWidth+8, 12);
     }
 
-    // ground
     ctx.fillStyle = '#d4a373';
     ctx.fillRect(0, H-6, W, 6);
 
-    // draw plane
-    drawPlane(plane);
+    drawCockatiel(plane);
 
     if (gameState === 'menu') {
-      // subtle oscillation
       ctx.fillStyle = 'rgba(0,0,0,0.06)';
       ctx.font = '20px Arial';
       ctx.textAlign = 'center';
@@ -249,7 +243,6 @@
     }
   }
 
-  // small cloud drawer
   function drawCloud(cx, cy, scale=1, alpha=1) {
     ctx.save();
     ctx.globalAlpha = 0.9*alpha;
@@ -262,7 +255,6 @@
     ctx.restore();
   }
 
-  // rounded rect helper
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x+r, y);
@@ -274,7 +266,6 @@
     ctx.fill();
   }
 
-  // input handlers
   function flap(){
     if (gameState === 'menu') startGame();
     if (gameState === 'playing') {
@@ -285,29 +276,18 @@
     }
   }
 
-  // keyboard
   window.addEventListener('keydown', (e)=> {
     if (e.code === 'Space') {
       e.preventDefault();
       flap();
     }
   });
-  // mouse/touch
   canvas.addEventListener('mousedown', (e)=> { flap(); });
   canvas.addEventListener('touchstart', (e)=> { e.preventDefault(); flap(); }, {passive:false});
 
-  // start button
   startBtn.onclick = startGame;
-
-  // game loop
-  function loop(){
-    update();
-    draw();
-    requestAnimationFrame(loop);
-  }
+  function loop(){ update(); draw(); requestAnimationFrame(loop); }
   loop();
-
-  // initialize menu overlay
   resetGame();
 })();
 </script>
