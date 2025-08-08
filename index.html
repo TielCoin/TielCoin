@@ -1,227 +1,315 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="en">
-
 <head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>TielCoin - The Meme Coin Revolution</title>
-
-    <style>
-
-        body {
-
-            font-family: Arial, sans-serif;
-
-            margin: 0;
-
-            padding: 0;
-
-            background-color: #f9f9f9;
-
-            color: #333;
-
-        }
-
-        header {
-
-            background-color: #ffcc4d;
-
-            text-align: center;
-
-            padding: 20px;
-
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-
-        }
-
-        header img {
-
-            width: 100px;
-
-            height: auto;
-
-        }
-
-        header h1 {
-
-            margin: 10px 0 0;
-
-            font-size: 2.5rem;
-
-            color: #333;
-
-        }
-
-        .container {
-
-            max-width: 900px;
-
-            margin: 20px auto;
-
-            padding: 20px;
-
-            background: #fff;
-
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-
-            border-radius: 8px;
-
-        }
-
-        .about {
-
-            text-align: center;
-
-            margin-bottom: 20px;
-
-        }
-
-        .about h2 {
-
-            font-size: 2rem;
-
-            color: #333;
-
-        }
-
-        .about p {
-
-            font-size: 1.2rem;
-
-            line-height: 1.6;
-
-            margin-top: 10px;
-
-        }
-
-        .links {
-
-            text-align: center;
-
-            margin: 30px 0;
-
-        }
-
-        .links a {
-
-            display: inline-block;
-
-            margin: 10px;
-
-            padding: 12px 20px;
-
-            font-size: 1rem;
-
-            font-weight: bold;
-
-            color: #fff;
-
-            text-decoration: none;
-
-            border-radius: 5px;
-
-            background-color: #0077cc;
-
-            transition: background-color 0.3s;
-
-        }
-
-        .links a:hover {
-
-            background-color: #005fa3;
-
-        }
-
-        footer {
-
-            text-align: center;
-
-            margin-top: 20px;
-
-            padding: 10px 0;
-
-            background: #333;
-
-            color: #fff;
-
-            font-size: 0.9rem;
-
-        }
-
-        footer a {
-
-            color: #ffcc4d;
-
-            text-decoration: none;
-
-        }
-
-    </style>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Flappy Plane</title>
+<style>
+  html,body { height:100%; margin:0; background:#70c5ce; font-family: Arial, sans-serif; }
+  #gameWrap { display:flex; align-items:center; justify-content:center; height:100vh; }
+  canvas { background: linear-gradient(#70c5ce,#a0e7f0); border:4px solid #2b7a78; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+  .ui {
+    position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    color:#034; font-weight:700; font-size:20px; text-shadow:0 1px 0 rgba(255,255,255,0.3);
+  }
+  .hint { position: absolute; bottom: 28px; left:50%; transform:translateX(-50%); color:#013; font-size:14px; opacity:0.9 }
+  #overlay {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;
+  }
+  .panel {
+    pointer-events:auto;
+    background:rgba(255,255,255,0.95); padding:18px 22px; border-radius:10px; text-align:center;
+    box-shadow:0 8px 30px rgba(0,0,0,0.2);
+  }
+  button { margin-top:10px; padding:8px 14px; font-size:15px; border-radius:6px; border:0; cursor:pointer; background:#2b7a78; color:white; }
+</style>
 </head>
-
 <body>
+<div id="gameWrap">
+  <div style="position:relative">
+    <div class="ui" id="scoreUI">Score: 0</div>
+    <canvas id="c" width="400" height="600"></canvas>
+    <div class="hint">Tap / Click / Space to fly up</div>
 
-
-
-<header>
-
-    <img src="2C837FDF-A218-4E73-B3B8-933ECDBFF3C2.png" alt="TielCoin Logo">
-
-    <h1>Welcome to TielCoin</h1>
-
-</header>
-
-
-
-<div class="container">
-
-    <section class="about">
-
-        <h2>About TielCoin</h2>
-
-        <p>
-
-            TielCoin is a revolutionary meme coin inspired by the playful and adorable cockatiel! 
-
-            Built on the Solana blockchain, TielCoin is fast, efficient, and community-driven. 
-
-            Join us as we take flight and redefine the meme coin world.
-
-        </p>
-
-    </section>
-
-
-
-    <div class="links">
-
-        <a href="https://x.com/teilcoin?s=21" target="_blank">Follow on Twitter</a>
-
-        <a href="https://t.me/TielCoinOffical" target="_blank">Join on Telegram</a>
-
-        <a href="https://pump.fun/coin/BcjpXTMLq1iy1ugwDLtS12me32eUFBerMrfnhhrDpump" target="_blank">Buy Now</a>
-
+    <div id="overlay">
+      <div class="panel" id="panel">
+        <h2 style="margin:0 0 6px 0;">Flappy Plane</h2>
+        <div style="font-size:14px; color:#123">Click / Tap / Press Space to start</div>
+        <button id="startBtn">Start</button>
+        <div style="margin-top:8px; font-size:12px; color:#555">Made with HTML5 Canvas</div>
+      </div>
     </div>
-
+  </div>
 </div>
 
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const scoreUI = document.getElementById('scoreUI');
+  const overlay = document.getElementById('overlay');
+  const panel = document.getElementById('panel');
+  const startBtn = document.getElementById('startBtn');
 
+  // Game variables
+  let plane = { x:80, y: H/2, w:44, h:30, vy:0, angle:0 };
+  const gravity = 0.55;
+  const jump = -9.5;
+  let pipes = [];
+  const pipeWidth = 62;
+  const pipeGap = 160;
+  let speed = 2.6;
+  let frameCount = 0;
+  let spawnInterval = 90; // frames
+  let score = 0;
+  let best = Number(localStorage.getItem('flappyPlaneBest')) || 0;
+  let gameState = 'menu'; // menu | playing | over
 
-<footer>
+  // Helpers
+  function rand(min,max){ return Math.random()*(max-min)+min; }
 
-    © 2024 TielCoin. All rights reserved. | <a href="https://x.com/teilcoin?s=21" target="_blank">Follow us</a>
+  // Draw plane (simple stylized plane)
+  function drawPlane(p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.angle);
+    // body
+    ctx.fillStyle = '#f77f00';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, p.w/2, p.h/2.4, 0, 0, Math.PI*2);
+    ctx.fill();
+    // cockpit
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(8, -6, 10, 6, 0, 0, Math.PI*2);
+    ctx.fill();
+    // tail
+    ctx.fillStyle = '#d35400';
+    ctx.beginPath();
+    ctx.moveTo(-p.w/2, -2);
+    ctx.lineTo(-p.w/2 - 12, -12);
+    ctx.lineTo(-p.w/2 + 2, -4);
+    ctx.fill();
+    // wing
+    ctx.fillStyle = '#efb810';
+    ctx.beginPath();
+    ctx.moveTo(-6,4);
+    ctx.lineTo(18,6);
+    ctx.lineTo(6,14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
 
-</footer>
+  function resetGame() {
+    plane = { x:80, y: H/2, w:44, h:30, vy:0, angle:0 };
+    pipes = [];
+    frameCount = 0;
+    score = 0;
+    speed = 2.6;
+    spawnInterval = 90;
+    scoreUI.textContent = 'Score: 0';
+    gameState = 'menu';
+    overlay.style.display = 'flex';
+    panel.innerHTML = `
+      <h2 style="margin:0 0 6px 0;">Flappy Plane</h2>
+      <div style="font-size:14px; color:#123">Click / Tap / Press Space to start</div>
+      <button id="startBtn">Start</button>
+      <div style="margin-top:8px; font-size:12px; color:#555">Best: ${best}</div>
+    `;
+    document.getElementById('startBtn').onclick = startGame;
+  }
 
+  function startGame(){
+    overlay.style.display = 'none';
+    gameState = 'playing';
+    plane.vy = 0;
+    plane.y = H/2;
+    frameCount = 0;
+    pipes = [];
+  }
 
+  function spawnPipe() {
+    const minOffset = 80;
+    const maxOffset = H - pipeGap - 120;
+    const topHeight = rand(minOffset, maxOffset);
+    pipes.push({
+      x: W + 10,
+      top: topHeight,
+      passed: false
+    });
+  }
 
+  function update() {
+    if (gameState !== 'playing') return;
+
+    frameCount++;
+    // spawn pipes slower at start; gets slightly faster over time
+    if (frameCount % Math.max(55, spawnInterval - Math.floor(score/5)) === 0) spawnPipe();
+
+    // physics
+    plane.vy += gravity;
+    plane.y += plane.vy;
+    plane.angle = Math.max(-0.6, Math.min(1.2, plane.vy * 0.06));
+
+    // move pipes
+    for (let i = pipes.length-1; i>=0; i--){
+      pipes[i].x -= speed;
+      // scored
+      if (!pipes[i].passed && pipes[i].x + pipeWidth < plane.x - plane.w/2) {
+        pipes[i].passed = true;
+        score++;
+        scoreUI.textContent = 'Score: ' + score;
+        // gradually increase speed
+        if (score % 5 === 0) speed += 0.25;
+      }
+      // remove offscreen
+      if (pipes[i].x + pipeWidth < -20) pipes.splice(i,1);
+    }
+
+    // collide with ground or ceiling
+    if (plane.y + plane.h/2 >= H - 6 || plane.y - plane.h/2 <= 6) {
+      endGame();
+    }
+
+    // collide with pipes
+    for (let p of pipes) {
+      const pipeTopRect = { x: p.x, y: 0, w: pipeWidth, h: p.top };
+      const pipeBottomRect = { x: p.x, y: p.top + pipeGap, w: pipeWidth, h: H - (p.top + pipeGap) };
+      if (rectCircleCollide(pipeTopRect, plane) || rectCircleCollide(pipeBottomRect, plane)) {
+        endGame();
+      }
+    }
+  }
+
+  // basic circle-rect collision: plane approximated as circle
+  function rectCircleCollide(rect, circle) {
+    const cx = circle.x, cy = circle.y, r = Math.max(circle.w, circle.h)/2.3;
+    const closestX = clamp(cx, rect.x, rect.x + rect.w);
+    const closestY = clamp(cy, rect.y, rect.y + rect.h);
+    const dx = cx - closestX;
+    const dy = cy - closestY;
+    return (dx*dx + dy*dy) <= r*r;
+  }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  function endGame(){
+    gameState = 'over';
+    best = Math.max(best, score);
+    localStorage.setItem('flappyPlaneBest', best);
+    // show panel
+    overlay.style.display = 'flex';
+    panel.innerHTML = `
+      <h2 style="margin:0 0 6px 0;">Game Over</h2>
+      <div style="font-size:15px; color:#123">Score: <strong>${score}</strong></div>
+      <div style="font-size:13px; color:#666">Best: ${best}</div>
+      <button id="restartBtn">Try Again</button>
+    `;
+    document.getElementById('restartBtn').onclick = () => {
+      resetGame();
+    };
+  }
+
+  function draw() {
+    // background sky gradient (canvas already has gradient in CSS, but draw clouds/ground)
+    ctx.clearRect(0,0,W,H);
+
+    // draw clouds (simple)
+    drawCloud(W*0.15 + (frameCount*0.2)%W, 80, 1.0, 1);
+    drawCloud(W*0.6 - (frameCount*0.28)%W, 140, 0.8, 0.7);
+
+    // draw pipes
+    for (let p of pipes) {
+      // top
+      ctx.fillStyle = '#2e8b57';
+      roundRect(ctx, p.x, 0, pipeWidth, p.top, 6, true, false);
+      // bottom
+      roundRect(ctx, p.x, p.top + pipeGap, pipeWidth, H - (p.top + pipeGap) - 8, 6, true, false);
+
+      // pipe lip
+      ctx.fillStyle = '#1f7a47';
+      ctx.fillRect(p.x - 4, p.top - 14, pipeWidth+8, 12); // top lip
+      ctx.fillRect(p.x - 4, p.top + pipeGap + (H - (p.top + pipeGap) - 8), pipeWidth+8, 12); // bottom lip
+    }
+
+    // ground
+    ctx.fillStyle = '#d4a373';
+    ctx.fillRect(0, H-6, W, 6);
+
+    // draw plane
+    drawPlane(plane);
+
+    if (gameState === 'menu') {
+      // subtle oscillation
+      ctx.fillStyle = 'rgba(0,0,0,0.06)';
+      ctx.font = '20px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click / Tap / Space to fly', W/2, H*0.75);
+    }
+  }
+
+  // small cloud drawer
+  function drawCloud(cx, cy, scale=1, alpha=1) {
+    ctx.save();
+    ctx.globalAlpha = 0.9*alpha;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 40*scale, 22*scale, 0, 0, Math.PI*2);
+    ctx.ellipse(cx+28*scale, cy+4*scale, 26*scale, 16*scale, 0, 0, Math.PI*2);
+    ctx.ellipse(cx-26*scale, cy+4*scale, 26*scale, 16*scale, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // rounded rect helper
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // input handlers
+  function flap(){
+    if (gameState === 'menu') startGame();
+    if (gameState === 'playing') {
+      plane.vy = jump;
+    } else if (gameState === 'over') {
+      resetGame();
+      startGame();
+    }
+  }
+
+  // keyboard
+  window.addEventListener('keydown', (e)=> {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      flap();
+    }
+  });
+  // mouse/touch
+  canvas.addEventListener('mousedown', (e)=> { flap(); });
+  canvas.addEventListener('touchstart', (e)=> { e.preventDefault(); flap(); }, {passive:false});
+
+  // start button
+  startBtn.onclick = startGame;
+
+  // game loop
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // initialize menu overlay
+  resetGame();
+})();
+</script>
 </body>
-
 </html>
-
-
