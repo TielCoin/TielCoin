@@ -32,31 +32,30 @@
     <div class="hint">Tap / Click / Space to fly up</div>
 
     <!-- Wooden branch name label -->
-      <div id="credit" style="
-  position:absolute;
-  top:10px;
-  right:10px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:160px; /* adjust based on your PNG width */
-  height:40px; /* adjust based on PNG height */
-  background-image:url('IMG_3899.png');
-  background-size:contain; /* ensures full branch is shown */
-  background-repeat:no-repeat;
-  background-position:center;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  color:#3b250f;
-  text-shadow:
-    0 1px 0 #f5deb3,
-    0 -1px 0 #f5deb3,
-    1px 0 0 #f5deb3,
-    -1px 0 0 #f5deb3;
-  white-space:nowrap;
-  pointer-events:none;
-">
-</div>
+    <div id="credit" style="
+      position:absolute;
+      top:10px;
+      right:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:160px;
+      height:40px;
+      background-image:url('IMG_3899.png');
+      background-size:contain;
+      background-repeat:no-repeat;
+      background-position:center;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color:#3b250f;
+      text-shadow:
+        0 1px 0 #f5deb3,
+        0 -1px 0 #f5deb3,
+        1px 0 0 #f5deb3,
+        -1px 0 0 #f5deb3;
+      white-space:nowrap;
+      pointer-events:none;
+    "></div>
 
     <div id="overlay">
       <div class="panel" id="panel">
@@ -80,23 +79,22 @@
   const startBtn = document.getElementById('startBtn');
 
   let plane = { x:80, y: H/2, w:50, h:50, vy:0, angle:0 };
-  const gravity = 0.55;
-  const jump = -9.5;
+  // Speeds are now in "per second" units
+  const gravity = 33;     // px/s²  (0.55 * 60)
+  const jump = -570;      // px/s   (-9.5 * 60)
   let pipes = [];
   const pipeWidth = 62;
   const pipeGap = 160;
-  let speed = 2.6;
-  let frameCount = 0;
-  let spawnInterval = 90;
+  let speed = 156;        // px/s   (2.6 * 60)
+  let spawnInterval = 1.5; // seconds
+  let spawnTimer = 0;
   let score = 0;
   let best = Number(localStorage.getItem('flappyCockatielBest')) || 0;
   let gameState = 'menu';
 
-  function rand(min,max){ return Math.random()*(max-min)+min; }
-
   // Load cockatiel PNG
   const cockatielImg = new Image();
-  cockatielImg.src = 'IMG_3897.png'; // must be in same folder as this HTML
+  cockatielImg.src = 'IMG_3897.png';
 
   function drawCockatiel(p) {
     ctx.save();
@@ -109,10 +107,10 @@
   function resetGame() {
     plane = { x:80, y: H/2, w:50, h:50, vy:0, angle:0 };
     pipes = [];
-    frameCount = 0;
     score = 0;
-    speed = 2.6;
-    spawnInterval = 90;
+    speed = 156;
+    spawnInterval = 1.5;
+    spawnTimer = 0;
     scoreUI.textContent = 'Score: 0';
     gameState = 'menu';
     overlay.style.display = 'flex';
@@ -130,8 +128,8 @@
     gameState = 'playing';
     plane.vy = 0;
     plane.y = H/2;
-    frameCount = 0;
     pipes = [];
+    spawnTimer = 0;
   }
 
   function spawnPipe() {
@@ -141,31 +139,40 @@
     pipes.push({ x: W + 10, top: topHeight, passed: false });
   }
 
-  function update() {
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+
+  function update(dt) {
     if (gameState !== 'playing') return;
 
-    frameCount++;
-    if (frameCount % Math.max(55, spawnInterval - Math.floor(score/5)) === 0) spawnPipe();
+    spawnTimer += dt;
+    if (spawnTimer >= spawnInterval) {
+      spawnPipe();
+      spawnTimer = 0;
+    }
 
-    plane.vy += gravity;
-    plane.y += plane.vy;
+    // Physics
+    plane.vy += gravity * dt;
+    plane.y  += plane.vy * dt;
     plane.angle = Math.max(-0.6, Math.min(1.2, plane.vy * 0.06));
 
+    // Move pipes
     for (let i = pipes.length-1; i>=0; i--){
-      pipes[i].x -= speed;
+      pipes[i].x -= speed * dt;
       if (!pipes[i].passed && pipes[i].x + pipeWidth < plane.x - plane.w/2) {
         pipes[i].passed = true;
         score++;
         scoreUI.textContent = 'Score: ' + score;
-        if (score % 5 === 0) speed += 0.25;
+        if (score % 5 === 0) speed += 15; // 0.25 * 60
       }
       if (pipes[i].x + pipeWidth < -20) pipes.splice(i,1);
     }
 
+    // Collision with ground/ceiling
     if (plane.y + plane.h/2 >= H - 6 || plane.y - plane.h/2 <= 6) {
       endGame();
     }
 
+    // Pipe collisions
     for (let p of pipes) {
       const pipeTopRect = { x: p.x, y: 0, w: pipeWidth, h: p.top };
       const pipeBottomRect = { x: p.x, y: p.top + pipeGap, w: pipeWidth, h: H - (p.top + pipeGap) };
@@ -203,13 +210,16 @@
 
   function draw() {
     ctx.clearRect(0,0,W,H);
-    drawCloud(W*0.15 + (frameCount*0.2)%W, 80, 1.0, 1);
-    drawCloud(W*0.6 - (frameCount*0.28)%W, 140, 0.8, 0.7);
 
+    // Clouds move with time
+    drawCloud(W*0.15 + (performance.now()*0.0002*W) % W, 80, 1.0, 1);
+    drawCloud(W*0.6 - (performance.now()*0.00028*W) % W, 140, 0.8, 0.7);
+
+    // Pipes
     for (let p of pipes) {
       ctx.fillStyle = '#2e8b57';
-      roundRect(ctx, p.x, 0, pipeWidth, p.top, 6, true, false);
-      roundRect(ctx, p.x, p.top + pipeGap, pipeWidth, H - (p.top + pipeGap) - 8, 6, true, false);
+      roundRect(ctx, p.x, 0, pipeWidth, p.top, 6);
+      roundRect(ctx, p.x, p.top + pipeGap, pipeWidth, H - (p.top + pipeGap) - 8, 6);
       ctx.fillStyle = '#1f7a47';
       ctx.fillRect(p.x - 4, p.top - 14, pipeWidth+8, 12);
       ctx.fillRect(p.x - 4, p.top + pipeGap + (H - (p.top + pipeGap) - 8), pipeWidth+8, 12);
@@ -219,13 +229,6 @@
     ctx.fillRect(0, H-6, W, 6);
 
     drawCockatiel(plane);
-
-    if (gameState === 'menu') {
-      ctx.fillStyle = 'rgba(0,0,0,0.06)';
-      ctx.font = '20px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Click / Tap / Space to fly', W/2, H*0.75);
-    }
   }
 
   function drawCloud(cx, cy, scale=1, alpha=1) {
@@ -267,19 +270,24 @@
       flap();
     }
   });
-  canvas.addEventListener('mousedown', (e)=> { flap(); });
+  canvas.addEventListener('mousedown', flap);
   canvas.addEventListener('touchstart', (e)=> { e.preventDefault(); flap(); }, {passive:false});
 
   startBtn.onclick = startGame;
-  function loop(){ update(); draw(); requestAnimationFrame(loop); }
-  loop();
+
+  // Main loop with deltaTime
+  let lastTime = performance.now();
+  function loop(now){
+    const dt = (now - lastTime) / 1000; // seconds
+    lastTime = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
   resetGame();
+  requestAnimationFrame(loop);
 })();
 </script>
 </body>
 </html>
-
-
-
-
-Try different method without altering the original code 
