@@ -1,176 +1,233 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Flappy Cockatiel</title>
-<style>
-  body {
-    margin: 0;
-    background: #70c5ce;
-    overflow: hidden;
-  }
-  canvas {
-    display: block;
-    margin: 0 auto;
-    background: #70c5ce;
-  }
-</style>
+  <meta charset="utf-8" />
+  <title>Flappy Cockatiel</title>
+  <style>
+    body {
+      margin: 0;
+      background: #70c5ce;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #70c5ce;
+    }
+  </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="320" height="480"></canvas>
-<script>
-let canvas = document.getElementById("gameCanvas");
-let ctx = canvas.getContext("2d");
+  <canvas id="gameCanvas" width="320" height="480"></canvas>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-let W = canvas.width;
-let H = canvas.height;
+    let frames = 0;
+    const DEGREE = Math.PI / 180;
 
-// Physics
-let gravity = 0.25;
-let jump = -4.6;
-let pipeWidth = 52;
-let pipeGap = 100;
-let speed = 2;
+    // Load sprite image
+    const sprite = new Image();
+    sprite.src = "bird.png"; // <-- your bird sprite
 
-// Game state
-let spawnTimer = 0; // time until next pipe
-let spawnInterval = 100; // frames at 60fps (~1.6 sec)
-let plane = { x: 50, y: 150, vy: 0, size: 24 };
-let pipes = [];
-let score = 0;
-let gameOver = false;
+    // Game state
+    const state = {
+      current: 0,
+      getReady: 0,
+      game: 1,
+      over: 2
+    };
 
-// Images
-let birdImg = new Image();
-birdImg.src = "cockatiel.png"; // your bird image
-
-let branchImg = new Image();
-branchImg.src = "branch.png"; // your branch image
-
-function reset() {
-  plane.y = 150;
-  plane.vy = 0;
-  pipes = [];
-  score = 0;
-  spawnTimer = 0;
-  gameOver = false;
-}
-
-function update(deltaTime) {
-  if (!gameOver) {
-    // Bird physics
-    plane.vy += gravity * deltaTime;
-    plane.y += plane.vy * deltaTime;
-
-    // Spawn pipes
-    spawnTimer -= deltaTime;
-    if (spawnTimer <= 0) {
-      let topHeight = Math.random() * (H - pipeGap - 40) + 20;
-      pipes.push({ x: W, top: topHeight, bottom: topHeight + pipeGap });
-      spawnTimer = spawnInterval; // reset timer
-    }
-
-    // Move pipes
-    for (let i = pipes.length - 1; i >= 0; i--) {
-      pipes[i].x -= speed * deltaTime;
-
-      if (pipes[i].x + pipeWidth < 0) {
-        pipes.splice(i, 1);
-        score++;
+    canvas.addEventListener("click", function(evt) {
+      switch (state.current) {
+        case state.getReady:
+          state.current = state.game;
+          break;
+        case state.game:
+          bird.flap();
+          break;
+        case state.over:
+          state.current = state.getReady;
+          pipes.reset();
+          score.reset();
+          bird.reset();
+          break;
       }
-    }
+    });
 
-    // Collisions
-    for (let p of pipes) {
-      if (
-        plane.x < p.x + pipeWidth &&
-        plane.x + plane.size > p.x &&
-        (plane.y < p.top || plane.y + plane.size > p.bottom)
-      ) {
-        gameOver = true;
+    // Bird
+    const bird = {
+      animation: [
+        { sX: 0, sY: 0 },
+        { sX: 0, sY: 0 },
+        { sX: 0, sY: 0 },
+        { sX: 0, sY: 0 }
+      ],
+      x: 50,
+      y: 150,
+      w: 34,
+      h: 26,
+      radius: 12,
+      frame: 0,
+      gravity: 0.25,
+      jump: 4.6,
+      speed: 0,
+      rotation: 0,
+
+      draw: function() {
+        ctx.fillStyle = "#ff0";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      },
+
+      flap: function() {
+        this.speed = -this.jump;
+      },
+
+      update: function() {
+        // if the game state is get ready state, the bird must flap slowly
+        this.period = state.current === state.getReady ? 10 : 5;
+        this.frame += frames % this.period === 0 ? 1 : 0;
+        this.frame = this.frame % this.animation.length;
+
+        if (state.current === state.getReady) {
+          this.y = 150; // reset position
+          this.rotation = 0 * DEGREE;
+        } else {
+          this.speed += this.gravity;
+          this.y += this.speed;
+
+          if (this.y + this.h / 2 >= canvas.height) {
+            this.y = canvas.height - this.h / 2;
+            if (state.current === state.game) {
+              state.current = state.over;
+            }
+          }
+
+          if (this.speed >= this.jump) {
+            this.rotation = 90 * DEGREE;
+            this.frame = 1;
+          } else {
+            this.rotation = -25 * DEGREE;
+          }
+        }
+      },
+
+      reset: function() {
+        this.speed = 0;
       }
+    };
+
+    // Pipes
+    const pipes = {
+      position: [],
+      top: { sX: 0, sY: 0 },
+      bottom: { sX: 0, sY: 0 },
+      w: 53,
+      h: 400,
+      gap: 85,
+      maxYPos: -150,
+      dx: 2,
+
+      draw: function() {
+        ctx.fillStyle = "#0f0";
+        for (let i = 0; i < this.position.length; i++) {
+          let p = this.position[i];
+          ctx.fillRect(p.x, p.y, this.w, this.h);
+          ctx.fillRect(p.x, p.y + this.h + this.gap, this.w, this.h);
+        }
+      },
+
+      update: function() {
+        if (state.current !== state.game) return;
+
+        if (frames % 100 === 0) {
+          this.position.push({
+            x: canvas.width,
+            y: this.maxYPos * (Math.random() + 1)
+          });
+        }
+        for (let i = 0; i < this.position.length; i++) {
+          let p = this.position[i];
+          p.x -= this.dx;
+
+          if (p.x + this.w <= 0) {
+            this.position.shift();
+            score.value += 1;
+            score.best = Math.max(score.value, score.best);
+          }
+        }
+      },
+
+      reset: function() {
+        this.position = [];
+      }
+    };
+
+    // Score
+    const score = {
+      best: 0,
+      value: 0,
+
+      draw: function() {
+        ctx.fillStyle = "#FFF";
+        ctx.strokeStyle = "#000";
+
+        if (state.current === state.game) {
+          ctx.lineWidth = 2;
+          ctx.font = "35px Teko";
+          ctx.fillText(this.value, canvas.width / 2, 50);
+          ctx.strokeText(this.value, canvas.width / 2, 50);
+        } else if (state.current === state.over) {
+          ctx.font = "25px Teko";
+          ctx.fillText(this.value, 225, 186);
+          ctx.strokeText(this.value, 225, 186);
+
+          ctx.fillText(this.best, 225, 228);
+          ctx.strokeText(this.best, 225, 228);
+        }
+      },
+
+      reset: function() {
+        this.value = 0;
+      }
+    };
+
+    function update() {
+      bird.update();
+      pipes.update();
     }
 
-    // Ground / ceiling
-    if (plane.y + plane.size > H || plane.y < 0) {
-      gameOver = true;
+    function draw() {
+      ctx.fillStyle = "#70c5ce";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      pipes.draw();
+      bird.draw();
+      score.draw();
     }
-  }
-}
 
-function draw() {
-  ctx.fillStyle = "#70c5ce";
-  ctx.fillRect(0, 0, W, H);
+    // --- SPEED FIX VARIABLES ---
+    let lastTime = performance.now();
+    const fixedDelta = 1000 / 60; // 60 updates/sec
+    let accumulator = 0;
 
-  // Clouds
-  drawCloud((Date.now() / 50) % (W + 60) - 60, 80, 1.0, 1);
-  drawCloud(W - ((Date.now() / 70) % (W + 60)), 140, 0.8, 0.7);
+    function loop(now = performance.now()) {
+      const delta = now - lastTime;
+      lastTime = now;
+      accumulator += delta;
 
-  // Pipes
-  ctx.fillStyle = "#228B22";
-  for (let p of pipes) {
-    ctx.fillRect(p.x, 0, pipeWidth, p.top);
-    ctx.fillRect(p.x, p.bottom, pipeWidth, H - p.bottom);
-  }
+      while (accumulator >= fixedDelta) {
+        update();
+        accumulator -= fixedDelta;
+      }
 
-  // Bird
-  ctx.drawImage(birdImg, plane.x, plane.y, plane.size, plane.size);
+      draw();
+      frames++;
+      requestAnimationFrame(loop);
+    }
 
-  // Score
-  ctx.fillStyle = "#fff";
-  ctx.font = "20px Arial";
-  ctx.fillText(score, 10, 25);
-
-  // Branch with dev name
-  let branchWidth = 100;
-  let branchHeight = 30;
-  let branchX = W - branchWidth - 5;
-  let branchY = 5;
-  ctx.drawImage(branchImg, branchX, branchY, branchWidth, branchHeight);
-  ctx.fillStyle = "#3e2723";
-  ctx.font = "10px Arial";
-  ctx.fillText("Dev - Balaji Gopinath", branchX + 5, branchY + 18);
-
-  if (gameOver) {
-    ctx.fillStyle = "#fff";
-    ctx.font = "20px Arial";
-    ctx.fillText("Game Over", W / 2 - 50, H / 2);
-  }
-}
-
-function drawCloud(x, y, scale, opacity) {
-  ctx.globalAlpha = opacity;
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.arc(x, y, 20 * scale, 0, Math.PI * 2);
-  ctx.arc(x + 25 * scale, y - 10 * scale, 15 * scale, 0, Math.PI * 2);
-  ctx.arc(x + 50 * scale, y, 20 * scale, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-}
-
-// Controls
-canvas.addEventListener("mousedown", function () {
-  if (!gameOver) {
-    plane.vy = jump;
-  } else {
-    reset();
-  }
-});
-
-// Game loop with refresh-rate independence
-let lastTime = performance.now();
-function loop(timestamp) {
-  let deltaTime = (timestamp - lastTime) / (1000 / 60); // scale to 60fps units
-  lastTime = timestamp;
-
-  update(deltaTime);
-  draw();
-
-  requestAnimationFrame(loop);
-}
-
-loop();
-</script>
+    loop();
+  </script>
 </body>
 </html>
