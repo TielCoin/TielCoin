@@ -25,68 +25,62 @@ let ctx = canvas.getContext("2d");
 let W = canvas.width;
 let H = canvas.height;
 
+// Physics
 let gravity = 0.25;
 let jump = -4.6;
 let pipeWidth = 52;
 let pipeGap = 100;
 let speed = 2;
-let frameCount = 0;
 
-let plane = {
-  x: 50,
-  y: 150,
-  vy: 0,
-  size: 24
-};
-
+// Game state
+let spawnTimer = 0; // time until next pipe
+let spawnInterval = 100; // frames at 60fps (~1.6 sec)
+let plane = { x: 50, y: 150, vy: 0, size: 24 };
 let pipes = [];
 let score = 0;
 let gameOver = false;
 
-// Load bird image
+// Images
 let birdImg = new Image();
-birdImg.src = "cockatiel.png"; // replace with your right-facing bird image path
+birdImg.src = "cockatiel.png"; // your bird image
 
-// Load wooden branch image for dev name
 let branchImg = new Image();
-branchImg.src = "branch.png"; // replace with your carved branch image path
+branchImg.src = "branch.png"; // your branch image
 
 function reset() {
   plane.y = 150;
   plane.vy = 0;
   pipes = [];
   score = 0;
-  frameCount = 0;
+  spawnTimer = 0;
   gameOver = false;
 }
 
 function update(deltaTime) {
   if (!gameOver) {
+    // Bird physics
     plane.vy += gravity * deltaTime;
     plane.y += plane.vy * deltaTime;
 
-    // Add pipes
-    if (frameCount % 100 < 1) {
+    // Spawn pipes
+    spawnTimer -= deltaTime;
+    if (spawnTimer <= 0) {
       let topHeight = Math.random() * (H - pipeGap - 40) + 20;
-      pipes.push({
-        x: W,
-        top: topHeight,
-        bottom: topHeight + pipeGap
-      });
+      pipes.push({ x: W, top: topHeight, bottom: topHeight + pipeGap });
+      spawnTimer = spawnInterval; // reset timer
     }
 
     // Move pipes
     for (let i = pipes.length - 1; i >= 0; i--) {
       pipes[i].x -= speed * deltaTime;
 
-      // Remove off-screen pipes
       if (pipes[i].x + pipeWidth < 0) {
         pipes.splice(i, 1);
         score++;
       }
     }
 
-    // Collision
+    // Collisions
     for (let p of pipes) {
       if (
         plane.x < p.x + pipeWidth &&
@@ -97,7 +91,7 @@ function update(deltaTime) {
       }
     }
 
-    // Hit the ground or top
+    // Ground / ceiling
     if (plane.y + plane.size > H || plane.y < 0) {
       gameOver = true;
     }
@@ -108,18 +102,18 @@ function draw() {
   ctx.fillStyle = "#70c5ce";
   ctx.fillRect(0, 0, W, H);
 
-  // Draw clouds
-  drawCloud(W * 0.15 + (frameCount * 0.2) % W, 80, 1.0, 1);
-  drawCloud(W * 0.6 - (frameCount * 0.28) % W, 140, 0.8, 0.7);
+  // Clouds
+  drawCloud((Date.now() / 50) % (W + 60) - 60, 80, 1.0, 1);
+  drawCloud(W - ((Date.now() / 70) % (W + 60)), 140, 0.8, 0.7);
 
-  // Draw pipes
+  // Pipes
   ctx.fillStyle = "#228B22";
   for (let p of pipes) {
     ctx.fillRect(p.x, 0, pipeWidth, p.top);
     ctx.fillRect(p.x, p.bottom, pipeWidth, H - p.bottom);
   }
 
-  // Draw bird
+  // Bird
   ctx.drawImage(birdImg, plane.x, plane.y, plane.size, plane.size);
 
   // Score
@@ -127,7 +121,7 @@ function draw() {
   ctx.font = "20px Arial";
   ctx.fillText(score, 10, 25);
 
-  // Draw branch with dev name at top right
+  // Branch with dev name
   let branchWidth = 100;
   let branchHeight = 30;
   let branchX = W - branchWidth - 5;
@@ -155,6 +149,7 @@ function drawCloud(x, y, scale, opacity) {
   ctx.globalAlpha = 1;
 }
 
+// Controls
 canvas.addEventListener("mousedown", function () {
   if (!gameOver) {
     plane.vy = jump;
@@ -163,16 +158,15 @@ canvas.addEventListener("mousedown", function () {
   }
 });
 
-// === REFRESH RATE FIX ===
+// Game loop with refresh-rate independence
 let lastTime = performance.now();
 function loop(timestamp) {
-  let deltaTime = (timestamp - lastTime) / 16.67; // normalize to 60fps
+  let deltaTime = (timestamp - lastTime) / (1000 / 60); // scale to 60fps units
   lastTime = timestamp;
 
   update(deltaTime);
   draw();
 
-  frameCount += deltaTime;
   requestAnimationFrame(loop);
 }
 
