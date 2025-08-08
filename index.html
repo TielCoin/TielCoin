@@ -1,283 +1,182 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
 <title>Flappy Cockatiel</title>
 <style>
-  html,body { height:100%; margin:0; background:#70c5ce; font-family: Arial, sans-serif; }
-  #gameWrap { display:flex; align-items:center; justify-content:center; height:100vh; }
-  canvas { background: linear-gradient(#70c5ce,#a0e7f0); border:4px solid #2b7a78; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
-  .ui {
-    position:absolute; top:16px; left:50%; transform:translateX(-50%);
-    color:#034; font-weight:700; font-size:20px; text-shadow:0 1px 0 rgba(255,255,255,0.3);
+  body {
+    margin: 0;
+    background: #70c5ce;
+    overflow: hidden;
   }
-  .hint { position: absolute; bottom: 28px; left:50%; transform:translateX(-50%); color:#013; font-size:14px; opacity:0.9 }
-  #overlay {
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background: #70c5ce;
   }
-  .panel {
-    pointer-events:auto;
-    background:rgba(255,255,255,0.95); padding:18px 22px; border-radius:10px; text-align:center;
-    box-shadow:0 8px 30px rgba(0,0,0,0.2);
-  }
-  button { margin-top:10px; padding:8px 14px; font-size:15px; border-radius:6px; border:0; cursor:pointer; background:#2b7a78; color:white; }
 </style>
 </head>
 <body>
-<div id="gameWrap">
-  <div style="position:relative">
-    <div class="ui" id="scoreUI">Score: 0</div>
-    <canvas id="c" width="400" height="600"></canvas>
-    <div class="hint">Tap / Click / Space to fly up</div>
-
-    <!-- Wooden branch name label -->
-      <div id="credit" style="
-  position:absolute;
-  top:10px;
-  right:10px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:160px; /* adjust based on your PNG width */
-  height:40px; /* adjust based on PNG height */
-  background-image:url('IMG_3899.png');
-  background-size:contain; /* ensures full branch is shown */
-  background-repeat:no-repeat;
-  background-position:center;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  color:#3b250f;
-  text-shadow:
-    0 1px 0 #f5deb3,
-    0 -1px 0 #f5deb3,
-    1px 0 0 #f5deb3,
-    -1px 0 0 #f5deb3;
-  white-space:nowrap;
-  pointer-events:none;
-">
-</div>
-
-    <div id="overlay">
-      <div class="panel" id="panel">
-        <h2 style="margin:0 0 6px 0;">Flappy Cockatiel</h2>
-        <div style="font-size:14px; color:#123">Click / Tap / Press Space to start</div>
-        <button id="startBtn">Start</button>
-        <div style="margin-top:8px; font-size:12px; color:#555">Made with HTML5 Canvas</div>
-      </div>
-    </div>
-  </div>
-</div>
-
+<canvas id="gameCanvas" width="320" height="480"></canvas>
 <script>
-(() => {
-  const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const scoreUI = document.getElementById('scoreUI');
-  const overlay = document.getElementById('overlay');
-  const panel = document.getElementById('panel');
-  const startBtn = document.getElementById('startBtn');
+let canvas = document.getElementById("gameCanvas");
+let ctx = canvas.getContext("2d");
 
-  let plane = { x:80, y: H/2, w:50, h:50, vy:0, angle:0 };
-  const gravity = 0.55;
-  const jump = -9.5;
-  let pipes = [];
-  const pipeWidth = 62;
-  const pipeGap = 160;
-  let speed = 2.6;
-  let frameCount = 0;
-  let spawnInterval = 90;
-  let score = 0;
-  let best = Number(localStorage.getItem('flappyCockatielBest')) || 0;
-  let gameState = 'menu';
+let W = canvas.width;
+let H = canvas.height;
 
-  function rand(min,max){ return Math.random()*(max-min)+min; }
+let gravity = 0.25;
+let jump = -4.6;
+let pipeWidth = 52;
+let pipeGap = 100;
+let speed = 2;
+let frameCount = 0;
 
-  // Load cockatiel PNG
-  const cockatielImg = new Image();
-  cockatielImg.src = 'IMG_3897.png'; // must be in same folder as this HTML
+let plane = {
+  x: 50,
+  y: 150,
+  vy: 0,
+  size: 24
+};
 
-  function drawCockatiel(p) {
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.angle);
-    ctx.drawImage(cockatielImg, -p.w/2, -p.h/2, p.w, p.h);
-    ctx.restore();
-  }
+let pipes = [];
+let score = 0;
+let gameOver = false;
 
-  function resetGame() {
-    plane = { x:80, y: H/2, w:50, h:50, vy:0, angle:0 };
-    pipes = [];
-    frameCount = 0;
-    score = 0;
-    speed = 2.6;
-    spawnInterval = 90;
-    scoreUI.textContent = 'Score: 0';
-    gameState = 'menu';
-    overlay.style.display = 'flex';
-    panel.innerHTML = `
-      <h2 style="margin:0 0 6px 0;">Flappy Cockatiel</h2>
-      <div style="font-size:14px; color:#123">Click / Tap / Press Space to start</div>
-      <button id="startBtn">Start</button>
-      <div style="margin-top:8px; font-size:12px; color:#555">Best: ${best}</div>
-    `;
-    document.getElementById('startBtn').onclick = startGame;
-  }
+// Load bird image
+let birdImg = new Image();
+birdImg.src = "cockatiel.png"; // replace with your right-facing bird image path
 
-  function startGame(){
-    overlay.style.display = 'none';
-    gameState = 'playing';
-    plane.vy = 0;
-    plane.y = H/2;
-    frameCount = 0;
-    pipes = [];
-  }
+// Load wooden branch image for dev name
+let branchImg = new Image();
+branchImg.src = "branch.png"; // replace with your carved branch image path
 
-  function spawnPipe() {
-    const minOffset = 80;
-    const maxOffset = H - pipeGap - 120;
-    const topHeight = rand(minOffset, maxOffset);
-    pipes.push({ x: W + 10, top: topHeight, passed: false });
-  }
+function reset() {
+  plane.y = 150;
+  plane.vy = 0;
+  pipes = [];
+  score = 0;
+  frameCount = 0;
+  gameOver = false;
+}
 
-  function update() {
-    if (gameState !== 'playing') return;
+function update(deltaTime) {
+  if (!gameOver) {
+    plane.vy += gravity * deltaTime;
+    plane.y += plane.vy * deltaTime;
 
-    frameCount++;
-    if (frameCount % Math.max(55, spawnInterval - Math.floor(score/5)) === 0) spawnPipe();
+    // Add pipes
+    if (frameCount % 100 < 1) {
+      let topHeight = Math.random() * (H - pipeGap - 40) + 20;
+      pipes.push({
+        x: W,
+        top: topHeight,
+        bottom: topHeight + pipeGap
+      });
+    }
 
-    plane.vy += gravity;
-    plane.y += plane.vy;
-    plane.angle = Math.max(-0.6, Math.min(1.2, plane.vy * 0.06));
+    // Move pipes
+    for (let i = pipes.length - 1; i >= 0; i--) {
+      pipes[i].x -= speed * deltaTime;
 
-    for (let i = pipes.length-1; i>=0; i--){
-      pipes[i].x -= speed;
-      if (!pipes[i].passed && pipes[i].x + pipeWidth < plane.x - plane.w/2) {
-        pipes[i].passed = true;
+      // Remove off-screen pipes
+      if (pipes[i].x + pipeWidth < 0) {
+        pipes.splice(i, 1);
         score++;
-        scoreUI.textContent = 'Score: ' + score;
-        if (score % 5 === 0) speed += 0.25;
-      }
-      if (pipes[i].x + pipeWidth < -20) pipes.splice(i,1);
-    }
-
-    if (plane.y + plane.h/2 >= H - 6 || plane.y - plane.h/2 <= 6) {
-      endGame();
-    }
-
-    for (let p of pipes) {
-      const pipeTopRect = { x: p.x, y: 0, w: pipeWidth, h: p.top };
-      const pipeBottomRect = { x: p.x, y: p.top + pipeGap, w: pipeWidth, h: H - (p.top + pipeGap) };
-      if (rectCircleCollide(pipeTopRect, plane) || rectCircleCollide(pipeBottomRect, plane)) {
-        endGame();
       }
     }
-  }
 
-  function rectCircleCollide(rect, circle) {
-    const cx = circle.x, cy = circle.y, r = Math.max(circle.w, circle.h)/2.3;
-    const closestX = clamp(cx, rect.x, rect.x + rect.w);
-    const closestY = clamp(cy, rect.y, rect.y + rect.h);
-    const dx = cx - closestX;
-    const dy = cy - closestY;
-    return (dx*dx + dy*dy) <= r*r;
-  }
-  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-
-  function endGame(){
-    gameState = 'over';
-    best = Math.max(best, score);
-    localStorage.setItem('flappyCockatielBest', best);
-    overlay.style.display = 'flex';
-    panel.innerHTML = `
-      <h2 style="margin:0 0 6px 0;">Game Over</h2>
-      <div style="font-size:15px; color:#123">Score: <strong>${score}</strong></div>
-      <div style="font-size:13px; color:#666">Best: ${best}</div>
-      <button id="restartBtn">Try Again</button>
-    `;
-    document.getElementById('restartBtn').onclick = () => {
-      resetGame();
-    };
-  }
-
-  function draw() {
-    ctx.clearRect(0,0,W,H);
-    drawCloud(W*0.15 + (frameCount*0.2)%W, 80, 1.0, 1);
-    drawCloud(W*0.6 - (frameCount*0.28)%W, 140, 0.8, 0.7);
-
+    // Collision
     for (let p of pipes) {
-      ctx.fillStyle = '#2e8b57';
-      roundRect(ctx, p.x, 0, pipeWidth, p.top, 6, true, false);
-      roundRect(ctx, p.x, p.top + pipeGap, pipeWidth, H - (p.top + pipeGap) - 8, 6, true, false);
-      ctx.fillStyle = '#1f7a47';
-      ctx.fillRect(p.x - 4, p.top - 14, pipeWidth+8, 12);
-      ctx.fillRect(p.x - 4, p.top + pipeGap + (H - (p.top + pipeGap) - 8), pipeWidth+8, 12);
+      if (
+        plane.x < p.x + pipeWidth &&
+        plane.x + plane.size > p.x &&
+        (plane.y < p.top || plane.y + plane.size > p.bottom)
+      ) {
+        gameOver = true;
+      }
     }
 
-    ctx.fillStyle = '#d4a373';
-    ctx.fillRect(0, H-6, W, 6);
-
-    drawCockatiel(plane);
-
-    if (gameState === 'menu') {
-      ctx.fillStyle = 'rgba(0,0,0,0.06)';
-      ctx.font = '20px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Click / Tap / Space to fly', W/2, H*0.75);
+    // Hit the ground or top
+    if (plane.y + plane.size > H || plane.y < 0) {
+      gameOver = true;
     }
   }
+}
 
-  function drawCloud(cx, cy, scale=1, alpha=1) {
-    ctx.save();
-    ctx.globalAlpha = 0.9*alpha;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 40*scale, 22*scale, 0, 0, Math.PI*2);
-    ctx.ellipse(cx+28*scale, cy+4*scale, 26*scale, 16*scale, 0, 0, Math.PI*2);
-    ctx.ellipse(cx-26*scale, cy+4*scale, 26*scale, 16*scale, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
+function draw() {
+  ctx.fillStyle = "#70c5ce";
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw clouds
+  drawCloud(W * 0.15 + (frameCount * 0.2) % W, 80, 1.0, 1);
+  drawCloud(W * 0.6 - (frameCount * 0.28) % W, 140, 0.8, 0.7);
+
+  // Draw pipes
+  ctx.fillStyle = "#228B22";
+  for (let p of pipes) {
+    ctx.fillRect(p.x, 0, pipeWidth, p.top);
+    ctx.fillRect(p.x, p.bottom, pipeWidth, H - p.bottom);
   }
 
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.arcTo(x+w, y, x+w, y+h, r);
-    ctx.arcTo(x+w, y+h, x, y+h, r);
-    ctx.arcTo(x, y+h, x, y, r);
-    ctx.arcTo(x, y, x+w, y, r);
-    ctx.closePath();
-    ctx.fill();
+  // Draw bird
+  ctx.drawImage(birdImg, plane.x, plane.y, plane.size, plane.size);
+
+  // Score
+  ctx.fillStyle = "#fff";
+  ctx.font = "20px Arial";
+  ctx.fillText(score, 10, 25);
+
+  // Draw branch with dev name at top right
+  let branchWidth = 100;
+  let branchHeight = 30;
+  let branchX = W - branchWidth - 5;
+  let branchY = 5;
+  ctx.drawImage(branchImg, branchX, branchY, branchWidth, branchHeight);
+  ctx.fillStyle = "#3e2723";
+  ctx.font = "10px Arial";
+  ctx.fillText("Dev - Balaji Gopinath", branchX + 5, branchY + 18);
+
+  if (gameOver) {
+    ctx.fillStyle = "#fff";
+    ctx.font = "20px Arial";
+    ctx.fillText("Game Over", W / 2 - 50, H / 2);
   }
+}
 
-  function flap(){
-    if (gameState === 'menu') startGame();
-    if (gameState === 'playing') {
-      plane.vy = jump;
-    } else if (gameState === 'over') {
-      resetGame();
-      startGame();
-    }
+function drawCloud(x, y, scale, opacity) {
+  ctx.globalAlpha = opacity;
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(x, y, 20 * scale, 0, Math.PI * 2);
+  ctx.arc(x + 25 * scale, y - 10 * scale, 15 * scale, 0, Math.PI * 2);
+  ctx.arc(x + 50 * scale, y, 20 * scale, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+canvas.addEventListener("mousedown", function () {
+  if (!gameOver) {
+    plane.vy = jump;
+  } else {
+    reset();
   }
+});
 
-  window.addEventListener('keydown', (e)=> {
-    if (e.code === 'Space') {
-      e.preventDefault();
-      flap();
-    }
-  });
-  canvas.addEventListener('mousedown', (e)=> { flap(); });
-  canvas.addEventListener('touchstart', (e)=> { e.preventDefault(); flap(); }, {passive:false});
+// === REFRESH RATE FIX ===
+let lastTime = performance.now();
+function loop(timestamp) {
+  let deltaTime = (timestamp - lastTime) / 16.67; // normalize to 60fps
+  lastTime = timestamp;
 
-  startBtn.onclick = startGame;
-  function loop(){ update(); draw(); requestAnimationFrame(loop); }
-  loop();
-  resetGame();
-})();
+  update(deltaTime);
+  draw();
+
+  frameCount += deltaTime;
+  requestAnimationFrame(loop);
+}
+
+loop();
 </script>
 </body>
 </html>
-
-
-
